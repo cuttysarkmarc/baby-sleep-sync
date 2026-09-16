@@ -43,6 +43,9 @@ function addDiagnosticButton(){
 }
 
 function simplifyUi(){
+  const brand=document.querySelector('.eyebrow');
+  if(brand) brand.textContent='SleepSarku';
+
   const nightTab=document.querySelector('button[data-tab="night"]');
   if(nightTab) nightTab.remove();
   const tabs=document.querySelector('.tabs');
