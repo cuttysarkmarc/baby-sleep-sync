@@ -42,12 +42,42 @@ function addDiagnosticButton(){
   test.parentElement?.appendChild(b);
 }
 
-const observer=new MutationObserver(addDiagnosticButton);
+function simplifyUi(){
+  const nightTab=document.querySelector('button[data-tab="night"]');
+  if(nightTab) nightTab.remove();
+  const tabs=document.querySelector('.tabs');
+  if(tabs) tabs.style.gridTemplateColumns='repeat(3,1fr)';
+
+  document.querySelectorAll('button[data-log="bedtime"]').forEach(b=>{b.textContent='BEDTIME'});
+
+  document.querySelectorAll('.setting').forEach(card=>{
+    const text=card.textContent||'';
+    if(text.includes('First night feed wait')||text.includes('Later night feed wait')) card.remove();
+  });
+
+  document.querySelectorAll('.history').forEach(row=>{
+    const text=row.textContent||'';
+    if(/Night wake|Feed started|Feed finished|Back asleep/i.test(text)) row.remove();
+  });
+
+  const h=document.querySelector('.hero');
+  if(h?.textContent==='Night'){
+    const today=document.querySelector('button[data-tab="today"]');
+    today?.click();
+  }
+}
+
+const observer=new MutationObserver(()=>{
+  addDiagnosticButton();
+  simplifyUi();
+});
 observer.observe(document.documentElement,{childList:true,subtree:true});
+
 window.addEventListener('load',async()=>{
   try{
     const reg=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});
     await reg.update();
   }catch(e){console.error(e)}
   addDiagnosticButton();
+  simplifyUi();
 });
