@@ -44,14 +44,17 @@ function addDiagnosticButton(){
 
 function simplifyUi(){
   const brand=document.querySelector('.eyebrow');
-  if(brand) brand.textContent='SleepSarku';
+  if(brand && brand.textContent!=='SleepSarku') brand.textContent='SleepSarku';
 
   const nightTab=document.querySelector('button[data-tab="night"]');
   if(nightTab) nightTab.remove();
-  const tabs=document.querySelector('.tabs');
-  if(tabs) tabs.style.gridTemplateColumns='repeat(3,1fr)';
 
-  document.querySelectorAll('button[data-log="bedtime"]').forEach(b=>{b.textContent='BEDTIME'});
+  const tabs=document.querySelector('.tabs');
+  if(tabs && tabs.style.gridTemplateColumns!=='repeat(3, 1fr)') tabs.style.gridTemplateColumns='repeat(3, 1fr)';
+
+  document.querySelectorAll('button[data-log="bedtime"]').forEach(b=>{
+    if(b.textContent!=='BEDTIME') b.textContent='BEDTIME';
+  });
 
   document.querySelectorAll('.setting').forEach(card=>{
     const text=card.textContent||'';
@@ -70,10 +73,18 @@ function simplifyUi(){
   }
 }
 
-const observer=new MutationObserver(()=>{
-  addDiagnosticButton();
-  simplifyUi();
-});
+let uiPassQueued=false;
+function queueUiPass(){
+  if(uiPassQueued)return;
+  uiPassQueued=true;
+  queueMicrotask(()=>{
+    uiPassQueued=false;
+    addDiagnosticButton();
+    simplifyUi();
+  });
+}
+
+const observer=new MutationObserver(queueUiPass);
 observer.observe(document.documentElement,{childList:true,subtree:true});
 
 window.addEventListener('load',async()=>{
@@ -81,6 +92,5 @@ window.addEventListener('load',async()=>{
     const reg=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});
     await reg.update();
   }catch(e){console.error(e)}
-  addDiagnosticButton();
-  simplifyUi();
+  queueUiPass();
 });
