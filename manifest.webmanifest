@@ -1,12 +1,19 @@
 {
-  "name":"Baby Sleep Sync",
-  "short_name":"Sleep Sync",
-  "description":"Shared baby sleep schedule and night-feed windows",
-  "start_url":"/",
-  "scope":"/",
-  "display":"standalone",
-  "orientation":"portrait",
-  "background_color":"#0b0f14",
-  "theme_color":"#0b0f14",
-  "icons":[{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "name": "SleepSarku",
+  "short_name": "SleepSarku",
+  "description": "Shared baby sleep rhythm and care tracker",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090a17",
+  "theme_color": "#090a17",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
