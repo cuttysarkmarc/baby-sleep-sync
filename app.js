@@ -4,7 +4,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 const VAPID_PUBLIC_KEY='BBIXHd5qOc_t0xwcgLb4y9tkGLBiJxiYMgka9wwsqkuZmSuVWDbc0jZtFjhQuBBuxHWK0Wt3Ww3-D6Kh5k2hdHU';
 const sb=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const app=document.querySelector('#app'),toastEl=document.querySelector('#toast');
-const S={user:null,member:null,house:null,members:[],settings:null,events:[],tab:'today',channel:null,install:null,editingId:null,pushSupported:'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window,pushEnabled:false,pushPermission:'Notification'in window?Notification.permission:'unsupported'};
+const S={user:null,member:null,house:null,members:[],settings:null,events:[],tab:'today',channel:null,install:null,editingId:null,deleteConfirmId:null,pushSupported:'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window,pushEnabled:false,pushPermission:'Notification'in window?Notification.permission:'unsupported'};
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toast=m=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastEl.t);toastEl.t=setTimeout(()=>toastEl.classList.remove('show'),2200)};
@@ -159,7 +159,7 @@ async function saveEdit(){
 async function deleteEvent(id){
   const r=await sb.from('sleep_events').delete().eq('id',id);
   if(r.error)throw r.error;
-  S.editingId=null;toast('Deleted');await load();
+  S.editingId=null;S.deleteConfirmId=null;toast('Deleted');await load();
 }
 async function saveBaby(){
   const baby_name=document.querySelector('#baby-name')?.value.trim()||null;
@@ -292,6 +292,13 @@ function editSheet(){
   return `<div class="sheet-backdrop" data-a="close-edit"><section class="edit-sheet" data-sheet><div class="sheet-grab"></div><div class="sheet-head"><div><span class="kicker">EDIT LOG</span><h2>Fix this entry</h2></div><button class="sheet-close" data-a="close-edit">×</button></div><label>Type<select id="edit-type" class="input">${options}</select></label><label>Date & time<input id="edit-time" class="input" type="datetime-local" value="${local}"></label><div class="sheet-actions"><button class="btn danger" data-a="delete-edit">DELETE</button><button class="btn" data-a="save-edit">SAVE</button></div></section></div>`;
 }
 
+function deleteConfirmModal(){
+  if(!S.deleteConfirmId)return '';
+  const e=S.events.find(x=>x.id===S.deleteConfirmId);
+  const [,name]=meta[e?.event_type]||['•','this log'];
+  return `<div class="confirm-backdrop"><section class="confirm-card"><div class="confirm-icon">⌫</div><span class="kicker">DELETE LOG</span><h2>Delete ${esc(name)}?</h2><p>This entry will be removed for both parents. You can’t undo this.</p><div class="confirm-actions"><button class="confirm-cancel" data-a="cancel-delete">KEEP IT</button><button class="confirm-delete" data-a="confirm-delete">DELETE LOG</button></div></section></div>`;
+}
+
 function srow(name,k){return `<div class="setting-row"><div><b>${name}</b><small>${dur(S.settings[k])}</small></div><button data-set="${k}" data-d="-15">−</button><button data-set="${k}" data-d="15">＋</button></div>`}
 function settings(){
   const status=!S.pushSupported?'Not supported':S.pushPermission==='denied'?'Blocked':S.pushEnabled?'On':'Off';
@@ -308,7 +315,7 @@ function nav(){
 function render(){
   if(!S.user)return;if(!S.member){app.innerHTML=setup();return}
   const body=S.tab==='today'?today():S.tab==='log'?quickLog():S.tab==='trends'?trends():settings();
-  app.innerHTML=`<div class="shell"><header class="top"><div><div class="brand">SleepSarku</div><div class="parent">${esc(S.member.display_name)}</div></div><div class="sync-dot">●</div></header><main class="page">${body}</main>${nav()}${editSheet()}</div>`;
+  app.innerHTML=`<div class="shell"><header class="top"><div><div class="brand">SleepSarku</div><div class="parent">${esc(S.member.display_name)}</div></div><div class="sync-dot">●</div></header><main class="page">${body}</main>${nav()}${editSheet()}${deleteConfirmModal()}</div>`;
 }
 async function run(fn){try{await fn()}catch(e){console.error(e);toast(e.message||'Could not save')}}
 
@@ -322,7 +329,9 @@ app.addEventListener('click',e=>{
   else if(b.dataset.edit){S.editingId=b.dataset.edit;render()}
   else if(b.dataset.a==='close-edit'){if(!e.target.closest('[data-sheet]')||b.dataset.a==='close-edit'){S.editingId=null;render()}}
   else if(b.dataset.a==='save-edit')run(saveEdit);
-  else if(b.dataset.a==='delete-edit'){if(confirm('Delete this log?'))run(()=>deleteEvent(S.editingId))}
+  else if(b.dataset.a==='delete-edit'){S.deleteConfirmId=S.editingId;render()}
+  else if(b.dataset.a==='cancel-delete'){S.deleteConfirmId=null;render()}
+  else if(b.dataset.a==='confirm-delete')run(()=>deleteEvent(S.deleteConfirmId))
   else if(b.dataset.set)run(()=>setting(b.dataset.set,Number(b.dataset.d)));
   else if(b.dataset.a==='share'){const text=`Join our SleepSarku household with code ${S.house.invite_code}`;navigator.share?navigator.share({title:'SleepSarku',text,url:location.origin}).catch(()=>{}):navigator.clipboard.writeText(`${text} ${location.origin}`).then(()=>toast('Invite copied'))}
   else if(b.dataset.a==='enable-push')run(enablePush);
