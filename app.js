@@ -4,7 +4,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 const VAPID_PUBLIC_KEY='BBIXHd5qOc_t0xwcgLb4y9tkGLBiJxiYMgka9wwsqkuZmSuVWDbc0jZtFjhQuBBuxHWK0Wt3Ww3-D6Kh5k2hdHU';
 const sb=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const app=document.querySelector('#app'),toastEl=document.querySelector('#toast');
-const S={user:null,member:null,house:null,members:[],settings:null,events:[],tab:'today',channel:null,install:null,pushSupported:'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window,pushEnabled:false,pushPermission:'Notification'in window?Notification.permission:'unsupported'};
+const S={user:null,member:null,house:null,members:[],settings:null,events:[],tab:'today',channel:null,install:null,editingId:null,pushSupported:'serviceWorker'in navigator&&'PushManager'in window&&'Notification'in window,pushEnabled:false,pushPermission:'Notification'in window?Notification.permission:'unsupported'};
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toast=m=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastEl.t);toastEl.t=setTimeout(()=>toastEl.classList.remove('show'),2200)};
@@ -146,13 +146,21 @@ async function log(type,note=''){
   const r=await sb.from('sleep_events').insert({household_id:S.member.household_id,event_type:type,occurred_at:new Date().toISOString(),note:note||S.member.display_name,created_by:S.user.id});
   if(r.error)throw r.error;toast('Logged');await load();
 }
-async function editEvent(id){
-  const e=S.events.find(x=>x.id===id);if(!e)return;
-  const d=new Date(e.occurred_at),local=new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,16),v=prompt('Edit time',local);if(!v)return;
-  const nd=new Date(v);if(Number.isNaN(+nd))return toast('Invalid time');
-  const r=await sb.from('sleep_events').update({occurred_at:nd.toISOString()}).eq('id',id);if(r.error)throw r.error;toast('Updated');await load();
+async function saveEdit(){
+  const e=S.events.find(x=>x.id===S.editingId);if(!e)return;
+  const type=document.querySelector('#edit-type')?.value||e.event_type;
+  const value=document.querySelector('#edit-time')?.value;
+  const nd=value?new Date(value):new Date(e.occurred_at);
+  if(Number.isNaN(+nd))throw new Error('Invalid time');
+  const r=await sb.from('sleep_events').update({event_type:type,occurred_at:nd.toISOString(),updated_at:new Date().toISOString()}).eq('id',e.id);
+  if(r.error)throw r.error;
+  S.editingId=null;toast('Updated');await load();
 }
-async function deleteEvent(id){const r=await sb.from('sleep_events').delete().eq('id',id);if(r.error)throw r.error;toast('Deleted');await load()}
+async function deleteEvent(id){
+  const r=await sb.from('sleep_events').delete().eq('id',id);
+  if(r.error)throw r.error;
+  S.editingId=null;toast('Deleted');await load();
+}
 async function saveBaby(){
   const baby_name=document.querySelector('#baby-name')?.value.trim()||null;
   const baby_birth_date=document.querySelector('#baby-birth')?.value||null;
@@ -235,7 +243,7 @@ function quickLog(){
   return `<section class="page-title"><span class="kicker">QUICK LOG</span><h1>What just happened?</h1><p>One tap saves it for both parents.</p></section>
   <div class="log-grid">${items.map(([t,i,n])=>{const e=last(t);return `<button class="log-card" data-log="${t}"><span>${i}</span><b>${n}</b><small>${e?`${fmt(e.occurred_at)} · ${dayKey(e.occurred_at)===dayKey(new Date())?'today':shortDate(e.occurred_at)}`:'Not logged today'}</small></button>`}).join('')}</div>
   <section class="section-head"><div><span class="kicker">RECENT</span><h2>Latest activity</h2></div></section>
-  ${historyList(12)}`;
+  ${historyList(6)}`;
 }
 
 function dailyMetrics(){
@@ -262,7 +270,7 @@ function trends(){
   <section class="chart-card"><div class="section-head compact"><div><span class="kicker">DAYTIME SLEEP</span><h2>Last 7 days</h2></div></div>${barChart(rows,'napMin',0,180,v=>dur(v))}</section>
   <section class="chart-card"><div class="section-head compact"><div><span class="kicker">BEDTIME</span><h2>Consistency</h2></div></div>${barChart(rows,'bedMin',1140,1380,v=>fmtMin(v))}</section>
   <section class="insight"><span>✦</span><div><b>SleepSarku is learning</b><p>${predictionInsight()}</p></div></section>
-  <section class="section-head"><div><span class="kicker">HISTORY</span><h2>Recent logs</h2></div></section>${historyList(30)}`;
+  <section class="section-head"><div><span class="kicker">HISTORY</span><h2>Recent logs</h2></div></section>${historyList(12)}`;
 }
 function predictionInsight(){
   const h=recentIntervals(),sets=[h.w1,h.w2,h.w3],n=sets.reduce((a,x)=>a+x.length,0);
@@ -273,7 +281,15 @@ function predictionInsight(){
 function historyList(limit){
   const hidden=new Set(['night_wake','feed_start','feed_end','back_asleep']);
   const rows=[...S.events].filter(e=>!hidden.has(e.event_type)).sort((a,b)=>new Date(b.occurred_at)-new Date(a.occurred_at)).slice(0,limit);
-  return `<div class="history-card">${rows.length?rows.map(e=>{const [icon,name]=meta[e.event_type]||['•',e.event_type];return `<div class="history-row"><span class="event-icon">${icon}</span><div><b>${esc(name)}</b><small>${esc(e.note||'Parent')} · ${shortDate(e.occurred_at)}</small></div><time>${fmt(e.occurred_at)}</time><button data-edit="${e.id}">⋯</button></div>`}).join(''):'<div class="empty">No activity yet.</div>'}</div>`;
+  return `<div class="history-card">${rows.length?rows.map(e=>{const [icon,name]=meta[e.event_type]||['•',e.event_type];return `<div class="history-row"><span class="event-icon">${icon}</span><div class="history-main"><b>${esc(name)}</b><small>${esc(e.note||'Parent')} · ${shortDate(e.occurred_at)}</small></div><time>${fmt(e.occurred_at)}</time><button class="edit-log" data-edit="${e.id}" aria-label="Edit log">✎</button></div>`}).join(''):'<div class="empty">No activity yet.</div>'}</div>`;
+}
+
+function editSheet(){
+  if(!S.editingId)return '';
+  const e=S.events.find(x=>x.id===S.editingId);if(!e)return '';
+  const d=new Date(e.occurred_at),local=new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const options=Object.entries(meta).map(([value,[icon,name]])=>`<option value="${value}" ${e.event_type===value?'selected':''}>${icon} ${name}</option>`).join('');
+  return `<div class="sheet-backdrop" data-a="close-edit"><section class="edit-sheet" data-sheet><div class="sheet-grab"></div><div class="sheet-head"><div><span class="kicker">EDIT LOG</span><h2>Fix this entry</h2></div><button class="sheet-close" data-a="close-edit">×</button></div><label>Type<select id="edit-type" class="input">${options}</select></label><label>Date & time<input id="edit-time" class="input" type="datetime-local" value="${local}"></label><div class="sheet-actions"><button class="btn danger" data-a="delete-edit">DELETE</button><button class="btn" data-a="save-edit">SAVE</button></div></section></div>`;
 }
 
 function srow(name,k){return `<div class="setting-row"><div><b>${name}</b><small>${dur(S.settings[k])}</small></div><button data-set="${k}" data-d="-15">−</button><button data-set="${k}" data-d="15">＋</button></div>`}
@@ -292,7 +308,7 @@ function nav(){
 function render(){
   if(!S.user)return;if(!S.member){app.innerHTML=setup();return}
   const body=S.tab==='today'?today():S.tab==='log'?quickLog():S.tab==='trends'?trends():settings();
-  app.innerHTML=`<div class="shell"><header class="top"><div><div class="brand">SleepSarku</div><div class="parent">${esc(S.member.display_name)}</div></div><div class="sync-dot">●</div></header><main class="page">${body}</main>${nav()}</div>`;
+  app.innerHTML=`<div class="shell"><header class="top"><div><div class="brand">SleepSarku</div><div class="parent">${esc(S.member.display_name)}</div></div><div class="sync-dot">●</div></header><main class="page">${body}</main>${nav()}${editSheet()}</div>`;
 }
 async function run(fn){try{await fn()}catch(e){console.error(e);toast(e.message||'Could not save')}}
 
@@ -303,7 +319,10 @@ app.addEventListener('click',e=>{
   else if(b.dataset.a==='create')run(()=>create(document.querySelector('#name')?.value.trim()));
   else if(b.dataset.a==='join'){const code=document.querySelector('#code')?.value||'';if(code.trim().length!==6)return toast('Enter the 6-character code');run(()=>join(code,document.querySelector('#name')?.value.trim()))}
   else if(b.dataset.a==='save-baby')run(saveBaby);
-  else if(b.dataset.edit){const id=b.dataset.edit;if(confirm('Edit this log time? Cancel to leave it unchanged.'))run(()=>editEvent(id));}
+  else if(b.dataset.edit){S.editingId=b.dataset.edit;render()}
+  else if(b.dataset.a==='close-edit'){if(!e.target.closest('[data-sheet]')||b.dataset.a==='close-edit'){S.editingId=null;render()}}
+  else if(b.dataset.a==='save-edit')run(saveEdit);
+  else if(b.dataset.a==='delete-edit'){if(confirm('Delete this log?'))run(()=>deleteEvent(S.editingId))}
   else if(b.dataset.set)run(()=>setting(b.dataset.set,Number(b.dataset.d)));
   else if(b.dataset.a==='share'){const text=`Join our SleepSarku household with code ${S.house.invite_code}`;navigator.share?navigator.share({title:'SleepSarku',text,url:location.origin}).catch(()=>{}):navigator.clipboard.writeText(`${text} ${location.origin}`).then(()=>toast('Invite copied'))}
   else if(b.dataset.a==='enable-push')run(enablePush);
