@@ -10,10 +10,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const toast=m=>{toastEl.textContent=m;toastEl.classList.add('show');clearTimeout(toastEl.t);toastEl.t=setTimeout(()=>toastEl.classList.remove('show'),2200)};
 const add=(d,m)=>new Date(new Date(d).getTime()+m*60000);
 const mins=(a,b)=>Math.round((new Date(b)-new Date(a))/60000);
-const dayKey=d=>{d=new Date(d);return \`\${d.getFullYear()}-\${String(d.getMonth()+1).padStart(2,'0')}-\${String(d.getDate()).padStart(2,'0')}\`};
+const dayKey=d=>{d=new Date(d);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const fmt=d=>d?new Intl.DateTimeFormat([],{hour:'numeric',minute:'2-digit'}).format(new Date(d)):'—';
 const shortDate=d=>new Intl.DateTimeFormat([],{weekday:'short',month:'short',day:'numeric'}).format(new Date(d));
-const dur=m=>{m=Math.max(0,Math.round(m||0));return \`\${Math.floor(m/60)?Math.floor(m/60)+'h ':''}\${m%60?m%60+'m':''}\`.trim()||'0m'};
+const dur=m=>{m=Math.max(0,Math.round(m||0));return `${Math.floor(m/60)?Math.floor(m/60)+'h ':''}${m%60?m%60+'m':''}`.trim()||'0m'};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
 const median=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),i=Math.floor(s.length/2);return s.length%2?s[i]:(s[i-1]+s[i])/2};
@@ -84,9 +84,9 @@ function todayState(){
 function countdown(target){
   if(!target)return '';
   const m=Math.round((new Date(target)-Date.now())/60000);
-  if(m<=0)return m>-15?'now':\`\${Math.abs(m)}m late\`;
-  if(m<60)return \`\${m} min\`;
-  return \`\${Math.floor(m/60)}h \${m%60}m\`;
+  if(m<=0)return m>-15?'now':`${Math.abs(m)}m late`;
+  if(m<60)return `${m} min`;
+  return `${Math.floor(m/60)}h ${m%60}m`;
 }
 
 function confidence(p){
@@ -101,7 +101,7 @@ function ageText(){
   const birth=new Date(S.house.baby_birth_date+'T12:00:00'),now=new Date();
   let months=(now.getFullYear()-birth.getFullYear())*12+now.getMonth()-birth.getMonth();
   if(now.getDate()<birth.getDate())months--;
-  return months>=0?\`\${months} month\${months===1?'':'s'}\`:'';
+  return months>=0?`${months} month${months===1?'':'s'}`:'';
 }
 
 async function auth(){
@@ -130,14 +130,14 @@ async function load(){
     for(const r of[h,st,ev,ms])if(r.error)throw r.error;
     S.house=h.data;S.settings=st.data;S.events=ev.data||[];S.members=ms.data||[];
     await sub(id);await refreshPushState();render();
-  }catch(e){console.error(e);app.innerHTML=\`<main class="center"><div class="logo">Zz</div><h1>SleepSarku</h1><p class="muted">Couldn’t connect.</p><button class="btn" onclick="location.reload()">TRY AGAIN</button></main>\`}
+  }catch(e){console.error(e);app.innerHTML=`<main class="center"><div class="logo">Zz</div><h1>SleepSarku</h1><p class="muted">Couldn’t connect.</p><button class="btn" onclick="location.reload()">TRY AGAIN</button></main>`}
 }
 async function sub(id){
   if(S.channel){await sb.removeChannel(S.channel);S.channel=null}if(!id)return;
   S.channel=sb.channel('sync:'+id)
-    .on('postgres_changes',{event:'*',schema:'public',table:'sleep_events',filter:\`household_id=eq.\${id}\`},load)
-    .on('postgres_changes',{event:'*',schema:'public',table:'sleep_settings',filter:\`household_id=eq.\${id}\`},load)
-    .on('postgres_changes',{event:'*',schema:'public',table:'households',filter:\`id=eq.\${id}\`},load)
+    .on('postgres_changes',{event:'*',schema:'public',table:'sleep_events',filter:`household_id=eq.${id}`},load)
+    .on('postgres_changes',{event:'*',schema:'public',table:'sleep_settings',filter:`household_id=eq.${id}`},load)
+    .on('postgres_changes',{event:'*',schema:'public',table:'households',filter:`id=eq.${id}`},load)
     .subscribe();
 }
 async function create(name){const r=await sb.rpc('create_household',{p_name:'Our Family',p_display_name:name||'Parent'});if(r.error)throw r.error;await load()}
@@ -178,7 +178,7 @@ async function disablePush(){
 }
 async function testPush(){
   const {data}=await sb.auth.getSession(),token=data.session?.access_token;if(!token)throw new Error('Could not verify this phone.');
-  const res=await fetch(\`\${SUPABASE_URL}/functions/v1/sleep-push\`,{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:\`Bearer \${token}\`},body:JSON.stringify({action:'test'})});
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/sleep-push`,{method:'POST',headers:{'Content-Type':'application/json',apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${token}`},body:JSON.stringify({action:'test'})});
   const body=await res.json().catch(()=>({}));if(!res.ok||!body.sent)throw new Error(body.error||'Test failed');toast('Test sent');
 }
 
@@ -188,42 +188,42 @@ const meta={
 };
 
 function setup(){
-  return \`<main class="center setup"><div class="logo glow">Zz</div><h1>SleepSarku</h1><p class="muted">A shared rhythm for naps, bedtime, and baby care.</p><div class="setup-box"><label>YOUR NAME</label><input id="name" class="input" placeholder="Dad or Mom"><button class="btn" data-a="create">CREATE HOUSEHOLD</button><div class="or">or</div><label>INVITE CODE</label><input id="code" class="input" maxlength="6" placeholder="ABC123"><button class="btn secondary" data-a="join">JOIN HOUSEHOLD</button></div></main>\`;
+  return `<main class="center setup"><div class="logo glow">Zz</div><h1>SleepSarku</h1><p class="muted">A shared rhythm for naps, bedtime, and baby care.</p><div class="setup-box"><label>YOUR NAME</label><input id="name" class="input" placeholder="Dad or Mom"><button class="btn" data-a="create">CREATE HOUSEHOLD</button><div class="or">or</div><label>INVITE CODE</label><input id="code" class="input" maxlength="6" placeholder="ABC123"><button class="btn secondary" data-a="join">JOIN HOUSEHOLD</button></div></main>`;
 }
 
 function timeline(c){
   const items=[];
   if(c.wake)items.push(['☀️',fmt(c.wake.occurred_at),'Wake']);
-  c.naps.forEach((n,i)=>items.push(['☁️',n.end?\`\${fmt(n.start.occurred_at)}–\${fmt(n.end.occurred_at)}\`:fmt(n.start.occurred_at),\`Nap \${i+1}\`]));
+  c.naps.forEach((n,i)=>items.push(['☁️',n.end?`${fmt(n.start.occurred_at)}–${fmt(n.end.occurred_at)}`:fmt(n.start.occurred_at),`Nap ${i+1}`]));
   if(c.bedtime)items.push(['🌙',fmt(c.bedtime.occurred_at),'Bed']);
-  return \`<div class="timeline">\${items.length?items.map(x=>\`<div class="timeline-item"><span>\${x[0]}</span><strong>\${x[1]}</strong><small>\${x[2]}</small></div>\`).join(''):'<div class="empty">Log morning wake to start today’s rhythm.</div>'}</div>\`;
+  return `<div class="timeline">${items.length?items.map(x=>`<div class="timeline-item"><span>${x[0]}</span><strong>${x[1]}</strong><small>${x[2]}</small></div>`).join(''):'<div class="empty">Log morning wake to start today’s rhythm.</div>'}</div>`;
 }
 
 function today(){
   const c=todayState(),baby=esc(S.house?.baby_name||'Your baby'),age=ageText();
   let title='Ready for today',big='—',time='',sub='Log morning wake to begin',primary='<button class="main-action" data-log="morning_wake">☀️ BABY IS UP</button>';
-  if(c.kind==='nap-running'){title='Nap in progress';big=dur(mins(c.open.start.occurred_at,new Date()));time=\`started \${fmt(c.open.start.occurred_at)}\`;sub='Tap when baby wakes';primary='<button class="main-action" data-log="nap_end">🌤️ BABY IS AWAKE</button>'}
+  if(c.kind==='nap-running'){title='Nap in progress';big=dur(mins(c.open.start.occurred_at,new Date()));time=`started ${fmt(c.open.start.occurred_at)}`;sub='Tap when baby wakes';primary='<button class="main-action" data-log="nap_end">🌤️ BABY IS AWAKE</button>'}
   if(['nap1','nap2','bedtime'].includes(c.kind)){
     const name=c.kind==='nap1'?'Nap 1':c.kind==='nap2'?'Nap 2':'Bedtime';
-    title=c.kind==='bedtime'?'Bedtime in':\`\${name} in\`;big=countdown(c.target);time=fmt(c.target);
+    title=c.kind==='bedtime'?'Bedtime in':`${name} in`;big=countdown(c.target);time=fmt(c.target);
     const lo=add(c.target,-(c.p?.spread||20)),hi=add(c.target,c.p?.spread||20);
-    sub=\`Expected \${fmt(lo)}–\${fmt(hi)} · \${confidence(c.p)}\`;
+    sub=`Expected ${fmt(lo)}–${fmt(hi)} · ${confidence(c.p)}`;
     primary=c.kind==='bedtime'?'<button class="main-action moon" data-log="bedtime">🌙 BEDTIME</button>':'<button class="main-action" data-log="nap_start">☁️ START NAP</button>';
   }
-  if(c.kind==='done'){title='Day complete';big='✓';time=fmt(c.bedtime.occurred_at);sub=\`Day sleep \${dur(c.totalNap)}\`;primary='<button class="main-action ghost" data-tab="trends">VIEW TODAY</button>'}
+  if(c.kind==='done'){title='Day complete';big='✓';time=fmt(c.bedtime.occurred_at);sub=`Day sleep ${dur(c.totalNap)}`;primary='<button class="main-action ghost" data-tab="trends">VIEW TODAY</button>'}
   const progress=c.target?clamp(1-(new Date(c.target)-Date.now())/(4*3600000),0.05,1):.12;
-  return \`<section class="hello"><div><span class="kicker">TODAY</span><h1>\${baby}</h1><p>\${age||'Sleep rhythm'}</p></div><div class="sync">● Synced</div></section>
+  return `<section class="hello"><div><span class="kicker">TODAY</span><h1>${baby}</h1><p>${age||'Sleep rhythm'}</p></div><div class="sync">● Synced</div></section>
   <section class="orbit-card">
     <div class="stars"></div>
-    <div class="orbit" style="--p:\${progress}"><div class="orbit-inner"><span class="orbit-label">\${esc(title)}</span><strong>\${esc(big)}</strong><b>\${esc(time)}</b><small>\${esc(sub)}</small></div></div>
-    \${primary}
+    <div class="orbit" style="--p:${progress}"><div class="orbit-inner"><span class="orbit-label">${esc(title)}</span><strong>${esc(big)}</strong><b>${esc(time)}</b><small>${esc(sub)}</small></div></div>
+    ${primary}
   </section>
-  <section class="section-head"><div><span class="kicker">TODAY'S RHYTHM</span><h2>At a glance</h2></div><div class="stat-pill">\${dur(c.totalNap)} naps</div></section>
-  \${timeline(c)}
+  <section class="section-head"><div><span class="kicker">TODAY'S RHYTHM</span><h2>At a glance</h2></div><div class="stat-pill">${dur(c.totalNap)} naps</div></section>
+  ${timeline(c)}
   <section class="mini-grid">
     <button class="mini-card" data-tab="log"><span>＋</span><b>Quick log</b><small>Feeds, solids, diaper</small></button>
     <button class="mini-card" data-tab="trends"><span>⌁</span><b>Trends</b><small>Patterns & averages</small></button>
-  </section>\`;
+  </section>`;
 }
 
 function quickLog(){
@@ -232,67 +232,67 @@ function quickLog(){
     ['morning_wake','☀️','Wake-up'],['nap_start','☁️','Start nap'],['nap_end','🌤️','End nap'],['bedtime','🌙','Bedtime'],
     ['bottle','🍼','Bottle'],['nursing','🤱','Nursing'],['solids','🥣','Solids'],['pumping','🫗','Pumping'],['diaper','🧷','Diaper']
   ];
-  return \`<section class="page-title"><span class="kicker">QUICK LOG</span><h1>What just happened?</h1><p>One tap saves it for both parents.</p></section>
-  <div class="log-grid">\${items.map(([t,i,n])=>{const e=last(t);return \`<button class="log-card" data-log="\${t}"><span>\${i}</span><b>\${n}</b><small>\${e?\`\${fmt(e.occurred_at)} · \${dayKey(e.occurred_at)===dayKey(new Date())?'today':shortDate(e.occurred_at)}\`:'Not logged today'}</small></button>\`}).join('')}</div>
+  return `<section class="page-title"><span class="kicker">QUICK LOG</span><h1>What just happened?</h1><p>One tap saves it for both parents.</p></section>
+  <div class="log-grid">${items.map(([t,i,n])=>{const e=last(t);return `<button class="log-card" data-log="${t}"><span>${i}</span><b>${n}</b><small>${e?`${fmt(e.occurred_at)} · ${dayKey(e.occurred_at)===dayKey(new Date())?'today':shortDate(e.occurred_at)}`:'Not logged today'}</small></button>`}).join('')}</div>
   <section class="section-head"><div><span class="kicker">RECENT</span><h2>Latest activity</h2></div></section>
-  \${historyList(12)}\`;
+  ${historyList(12)}`;
 }
 
 function dailyMetrics(){
   return pairDays(S.events).slice(-7).map(d=>{
     const napMin=d.naps.reduce((t,n)=>t+(n.end?mins(n.start.occurred_at,n.end.occurred_at):0),0);
-    return {date:d.date,wake:d.wake?new Date(d.wake.occurred_at):null,bed:d.bedtime?new Date(d.bedtime.occurred_at):null,napMin,naps:d.naps.filter(n=>n.end).length};
+    const bedDate=d.bedtime?new Date(d.bedtime.occurred_at):null;return {date:d.date,wake:d.wake?new Date(d.wake.occurred_at):null,bed:bedDate,bedMin:bedDate?timeMinutes(bedDate):null,napMin,naps:d.naps.filter(n=>n.end).length};
   });
 }
 function timeMinutes(d){return d?d.getHours()*60+d.getMinutes():null}
 function barChart(rows,field,min,max,format){
-  return \`<div class="chart">\${rows.map(r=>{const v=r[field],pct=v==null?3:clamp((v-min)/(max-min)*100,3,100);return \`<div class="bar-col"><div class="bar-value">\${v==null?'—':format(v)}</div><div class="bar-track"><div class="bar-fill" style="height:\${pct}%"></div></div><small>\${new Date(r.date+'T12:00:00').toLocaleDateString([],{weekday:'short'})}</small></div>\`}).join('')}</div>\`;
+  return `<div class="chart">${rows.map(r=>{const v=r[field],pct=v==null?3:clamp((v-min)/(max-min)*100,3,100);return `<div class="bar-col"><div class="bar-value">${v==null?'—':format(v)}</div><div class="bar-track"><div class="bar-fill" style="height:${pct}%"></div></div><small>${new Date(r.date+'T12:00:00').toLocaleDateString([],{weekday:'short'})}</small></div>`}).join('')}</div>`;
 }
 function trends(){
   const rows=dailyMetrics(),completed=rows.filter(r=>r.napMin>0),avgNap=Math.round(avg(completed.map(r=>r.napMin))||0);
   const wakeVals=rows.map(r=>timeMinutes(r.wake)).filter(v=>v!=null),bedVals=rows.map(r=>timeMinutes(r.bed)).filter(v=>v!=null);
   const avgWake=avg(wakeVals),avgBed=avg(bedVals);
   const fmtMin=v=>{const h=Math.floor(v/60)%24,m=Math.round(v%60);return new Date(2000,0,1,h,m).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})};
-  return \`<section class="page-title"><span class="kicker">TRENDS</span><h1>What’s working?</h1><p>Sleep patterns from your recent logs.</p></section>
+  return `<section class="page-title"><span class="kicker">TRENDS</span><h1>What’s working?</h1><p>Sleep patterns from your recent logs.</p></section>
   <div class="metric-grid">
-    <div class="metric"><span>DAY SLEEP</span><strong>\${dur(avgNap)}</strong><small>7-day average</small></div>
-    <div class="metric"><span>WAKE-UP</span><strong>\${avgWake!=null?fmtMin(avgWake):'—'}</strong><small>average</small></div>
-    <div class="metric"><span>BEDTIME</span><strong>\${avgBed!=null?fmtMin(avgBed):'—'}</strong><small>average</small></div>
+    <div class="metric"><span>DAY SLEEP</span><strong>${dur(avgNap)}</strong><small>7-day average</small></div>
+    <div class="metric"><span>WAKE-UP</span><strong>${avgWake!=null?fmtMin(avgWake):'—'}</strong><small>average</small></div>
+    <div class="metric"><span>BEDTIME</span><strong>${avgBed!=null?fmtMin(avgBed):'—'}</strong><small>average</small></div>
   </div>
-  <section class="chart-card"><div class="section-head compact"><div><span class="kicker">DAYTIME SLEEP</span><h2>Last 7 days</h2></div></div>\${barChart(rows,'napMin',0,180,v=>dur(v))}</section>
-  <section class="chart-card"><div class="section-head compact"><div><span class="kicker">BEDTIME</span><h2>Consistency</h2></div></div>\${barChart(rows,'bed',1140,1380,v=>fmtMin(timeMinutes(v)))}</section>
-  <section class="insight"><span>✦</span><div><b>SleepSarku is learning</b><p>\${predictionInsight()}</p></div></section>
-  <section class="section-head"><div><span class="kicker">HISTORY</span><h2>Recent logs</h2></div></section>\${historyList(30)}\`;
+  <section class="chart-card"><div class="section-head compact"><div><span class="kicker">DAYTIME SLEEP</span><h2>Last 7 days</h2></div></div>${barChart(rows,'napMin',0,180,v=>dur(v))}</section>
+  <section class="chart-card"><div class="section-head compact"><div><span class="kicker">BEDTIME</span><h2>Consistency</h2></div></div>${barChart(rows,'bedMin',1140,1380,v=>fmtMin(v))}</section>
+  <section class="insight"><span>✦</span><div><b>SleepSarku is learning</b><p>${predictionInsight()}</p></div></section>
+  <section class="section-head"><div><span class="kicker">HISTORY</span><h2>Recent logs</h2></div></section>${historyList(30)}`;
 }
 function predictionInsight(){
   const h=recentIntervals(),sets=[h.w1,h.w2,h.w3],n=sets.reduce((a,x)=>a+x.length,0);
   if(n<4)return 'Keep logging wake-ups and naps. Predictions become personalized after a few complete days.';
   const d=Math.round(avg(sets.flat().slice(-12))||0);
-  return \`Predictions now use \${n} recent wake-window samples and blend them with your schedule. Recent average wake window: \${dur(d)}.\`;
+  return `Predictions now use ${n} recent wake-window samples and blend them with your schedule. Recent average wake window: ${dur(d)}.`;
 }
 function historyList(limit){
   const hidden=new Set(['night_wake','feed_start','feed_end','back_asleep']);
   const rows=[...S.events].filter(e=>!hidden.has(e.event_type)).sort((a,b)=>new Date(b.occurred_at)-new Date(a.occurred_at)).slice(0,limit);
-  return \`<div class="history-card">\${rows.length?rows.map(e=>{const [icon,name]=meta[e.event_type]||['•',e.event_type];return \`<div class="history-row"><span class="event-icon">\${icon}</span><div><b>\${esc(name)}</b><small>\${esc(e.note||'Parent')} · \${shortDate(e.occurred_at)}</small></div><time>\${fmt(e.occurred_at)}</time><button data-edit="\${e.id}">⋯</button></div>\`}).join(''):'<div class="empty">No activity yet.</div>'}</div>\`;
+  return `<div class="history-card">${rows.length?rows.map(e=>{const [icon,name]=meta[e.event_type]||['•',e.event_type];return `<div class="history-row"><span class="event-icon">${icon}</span><div><b>${esc(name)}</b><small>${esc(e.note||'Parent')} · ${shortDate(e.occurred_at)}</small></div><time>${fmt(e.occurred_at)}</time><button data-edit="${e.id}">⋯</button></div>`}).join(''):'<div class="empty">No activity yet.</div>'}</div>`;
 }
 
-function srow(name,k){return \`<div class="setting-row"><div><b>\${name}</b><small>\${dur(S.settings[k])}</small></div><button data-set="\${k}" data-d="-15">−</button><button data-set="\${k}" data-d="15">＋</button></div>\`}
+function srow(name,k){return `<div class="setting-row"><div><b>${name}</b><small>${dur(S.settings[k])}</small></div><button data-set="${k}" data-d="-15">−</button><button data-set="${k}" data-d="15">＋</button></div>`}
 function settings(){
   const status=!S.pushSupported?'Not supported':S.pushPermission==='denied'?'Blocked':S.pushEnabled?'On':'Off';
-  return \`<section class="page-title"><span class="kicker">SETTINGS</span><h1>SleepSarku</h1><p>Shared between \${S.members.map(m=>esc(m.display_name)).join(' + ')||'your household'}.</p></section>
-  <section class="settings-card"><span class="kicker">BABY PROFILE</span><label>Baby name<input id="baby-name" class="input" value="\${esc(S.house.baby_name||'')}" placeholder="Baby"></label><label>Birth date<input id="baby-birth" class="input" type="date" value="\${esc(S.house.baby_birth_date||'')}"></label><button class="btn" data-a="save-baby">SAVE PROFILE</button></section>
-  <section class="settings-card"><div class="settings-title"><div><span class="kicker">REMINDERS</span><h2>Android notifications</h2></div><span class="status">\${status}</span></div><p>Nap and bedtime reminders can alert even when SleepSarku is closed.</p><div class="btns">\${S.pushEnabled?'<button class="btn secondary" data-a="disable-push">DISABLE</button><button class="btn" data-a="test-push">TEST</button>':'<button class="btn" data-a="enable-push">ENABLE REMINDERS</button>'}</div></section>
-  <section class="settings-card"><div class="settings-title"><div><span class="kicker">HOUSEHOLD</span><h2>Invite code</h2></div><strong class="code">\${esc(S.house.invite_code)}</strong></div><button class="btn secondary" data-a="share">SHARE WITH PARTNER</button></section>
-  <section class="settings-card"><span class="kicker">SCHEDULE BASELINE</span>\${srow('Wake window 1','wake_window_1_minutes')}\${srow('Wake window 2','wake_window_2_minutes')}\${srow('Wake window 3','wake_window_3_minutes')}\${srow('Day sleep cap','daytime_sleep_cap_minutes')}</section>\`;
+  return `<section class="page-title"><span class="kicker">SETTINGS</span><h1>SleepSarku</h1><p>Shared between ${S.members.map(m=>esc(m.display_name)).join(' + ')||'your household'}.</p></section>
+  <section class="settings-card"><span class="kicker">BABY PROFILE</span><label>Baby name<input id="baby-name" class="input" value="${esc(S.house.baby_name||'')}" placeholder="Baby"></label><label>Birth date<input id="baby-birth" class="input" type="date" value="${esc(S.house.baby_birth_date||'')}"></label><button class="btn" data-a="save-baby">SAVE PROFILE</button></section>
+  <section class="settings-card"><div class="settings-title"><div><span class="kicker">REMINDERS</span><h2>Android notifications</h2></div><span class="status">${status}</span></div><p>Nap and bedtime reminders can alert even when SleepSarku is closed.</p><div class="btns">${S.pushEnabled?'<button class="btn secondary" data-a="disable-push">DISABLE</button><button class="btn" data-a="test-push">TEST</button>':'<button class="btn" data-a="enable-push">ENABLE REMINDERS</button>'}</div></section>
+  <section class="settings-card"><div class="settings-title"><div><span class="kicker">HOUSEHOLD</span><h2>Invite code</h2></div><strong class="code">${esc(S.house.invite_code)}</strong></div><button class="btn secondary" data-a="share">SHARE WITH PARTNER</button></section>
+  <section class="settings-card"><span class="kicker">SCHEDULE BASELINE</span>${srow('Wake window 1','wake_window_1_minutes')}${srow('Wake window 2','wake_window_2_minutes')}${srow('Wake window 3','wake_window_3_minutes')}${srow('Day sleep cap','daytime_sleep_cap_minutes')}</section>`;
 }
 function nav(){
   const items=[['today','⌂','Today'],['log','＋','Log'],['trends','⌁','Trends'],['settings','⚙','Settings']];
-  return \`<nav class="tabs">\${items.map(([id,i,n])=>\`<button class="tab \${S.tab===id?'active':''}" data-tab="\${id}"><span>\${i}</span>\${n}</button>\`).join('')}</nav>\`;
+  return `<nav class="tabs">${items.map(([id,i,n])=>`<button class="tab ${S.tab===id?'active':''}" data-tab="${id}"><span>${i}</span>${n}</button>`).join('')}</nav>`;
 }
 function render(){
   if(!S.user)return;if(!S.member){app.innerHTML=setup();return}
   const body=S.tab==='today'?today():S.tab==='log'?quickLog():S.tab==='trends'?trends():settings();
-  app.innerHTML=\`<div class="shell"><header class="top"><div><div class="brand">SleepSarku</div><div class="parent">\${esc(S.member.display_name)}</div></div><div class="sync-dot">●</div></header><main class="page">\${body}</main>\${nav()}</div>\`;
+  app.innerHTML=`<div class="shell"><header class="top"><div><div class="brand">SleepSarku</div><div class="parent">${esc(S.member.display_name)}</div></div><div class="sync-dot">●</div></header><main class="page">${body}</main>${nav()}</div>`;
 }
 async function run(fn){try{await fn()}catch(e){console.error(e);toast(e.message||'Could not save')}}
 
@@ -305,7 +305,7 @@ app.addEventListener('click',e=>{
   else if(b.dataset.a==='save-baby')run(saveBaby);
   else if(b.dataset.edit){const id=b.dataset.edit;if(confirm('Edit this log time? Cancel to leave it unchanged.'))run(()=>editEvent(id));}
   else if(b.dataset.set)run(()=>setting(b.dataset.set,Number(b.dataset.d)));
-  else if(b.dataset.a==='share'){const text=\`Join our SleepSarku household with code \${S.house.invite_code}\`;navigator.share?navigator.share({title:'SleepSarku',text,url:location.origin}).catch(()=>{}):navigator.clipboard.writeText(\`\${text} \${location.origin}\`).then(()=>toast('Invite copied'))}
+  else if(b.dataset.a==='share'){const text=`Join our SleepSarku household with code ${S.house.invite_code}`;navigator.share?navigator.share({title:'SleepSarku',text,url:location.origin}).catch(()=>{}):navigator.clipboard.writeText(`${text} ${location.origin}`).then(()=>toast('Invite copied'))}
   else if(b.dataset.a==='enable-push')run(enablePush);
   else if(b.dataset.a==='disable-push')run(disablePush);
   else if(b.dataset.a==='test-push')run(testPush);
