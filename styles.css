@@ -12,3 +12,38 @@
   .hello h1{font-size:24px}
   .timeline-item{min-width:82px}
 }
+
+
+/* SleepSarku delete confirmation */
+.confirm-backdrop{
+  position:fixed;inset:0;z-index:110;display:grid;place-items:center;
+  padding:22px;background:rgba(3,4,14,.78);backdrop-filter:blur(10px)
+}
+.confirm-card{
+  width:min(100%,390px);text-align:center;padding:20px 18px 16px;
+  border-radius:24px;
+  background:
+    radial-gradient(circle at 50% 0,rgba(255,111,153,.14),transparent 42%),
+    linear-gradient(165deg,#1b1c3d,#101124);
+  border:1px solid rgba(255,255,255,.11);
+  box-shadow:0 24px 80px rgba(0,0,0,.58)
+}
+.confirm-icon{
+  width:54px;height:54px;margin:0 auto 12px;border-radius:18px;
+  display:grid;place-items:center;font-size:25px;
+  color:#ff9ab6;background:rgba(255,103,145,.09);
+  border:1px solid rgba(255,119,158,.18)
+}
+.confirm-card h2{font-size:22px;letter-spacing:-.025em;margin:5px 0 7px}
+.confirm-card p{margin:0 auto 17px;max-width:300px;color:#999bb8;font-size:12px;line-height:1.45}
+.confirm-actions{display:grid;grid-template-columns:1fr 1.15fr;gap:9px}
+.confirm-actions button{
+  border:0;border-radius:14px;padding:12px 10px;font-size:11px;font-weight:900
+}
+.confirm-cancel{
+  color:#d0d1e8;background:#22233e;border:1px solid rgba(255,255,255,.07)!important
+}
+.confirm-delete{
+  color:#fff;background:linear-gradient(105deg,#bc3e67,#ec5c80);
+  box-shadow:0 8px 24px rgba(224,72,115,.2)
+}
